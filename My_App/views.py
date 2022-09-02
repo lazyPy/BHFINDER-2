@@ -1,32 +1,30 @@
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout
 from django.shortcuts import render, redirect
 from .forms import *
 
 
 # Create your views here.
 
-def homePage(request):
-    return render(request, 'home.html')
+def loginUser(request):
+    if request.user.is_authenticated:
+        return redirect('home')
 
-
-def loginPage(request):
-    #if request.user.is_authenticated:
-    #    return redirect('home')
+    form = LoginForm()
 
     if request.method == 'POST':
-        email = request.POST.get('email')
-        password = request.POST.get('password')
-
-        user = authenticate(request, email=email, password=password)
-
-        if user is not None:
-            login(request, user)
+        form = AuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            login(request, form.user_cache)
             return redirect('home')
 
-    return render(request, 'login.html')
+    context = {
+        'form': form
+    }
+
+    return render(request, 'login.html', context)
 
 
-def registerPage(request):
+def registerUser(request):
     form = UserForm()
 
     if request.method == 'POST':
@@ -39,3 +37,53 @@ def registerPage(request):
         'form': form,
     }
     return render(request, 'register.html', context)
+
+
+def logoutUser(request):
+    logout(request)
+    return redirect('login')
+
+
+def homePage(request):
+    form = BoardingHouseForm()
+    boarding_houses = BoardingHouse.objects.all()
+
+    if request.method == 'POST':
+        BoardingHouse.objects.create(
+            owner=request.user,
+            name=request.POST.get('name'),
+            description=request.POST.get('description'),
+            phone=request.POST.get('phone'),
+            location=request.POST.get('location'),
+            detail=request.POST.get('detail'),
+            picture=request.FILES.get('picture'),
+        )
+        return redirect('home')
+
+    context = {
+        'form': form,
+        'boarding_houses': boarding_houses,
+    }
+    return render(request, 'home.html', context)
+
+
+def myBh(request, pk):
+    boarding_houses = BoardingHouse.objects.all()
+
+    context = {
+        'boarding_houses': boarding_houses,
+    }
+    return render(request, 'my-bh.html', context)
+
+
+def profile(request, pk):
+    return render(request, 'profile.html')
+
+
+def bhDetail(request, pk):
+    bh = BoardingHouse.objects.get(id=pk)
+
+    context = {
+        'bh': bh,
+    }
+    return render(request, 'bh-detail.html', context)
